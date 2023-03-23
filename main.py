@@ -5,13 +5,10 @@ from datetime import datetime
 import argparse
 
 
-async def tcp_echo_client(message, host, port, file):
-    reader, writer = await asyncio.open_connection(host, port)
+async def tcp_receiving_client(host, port, file):
+    reader, __ = await asyncio.open_connection(host, port)
     while True:
         try:
-            # print(f'Send: {message!r}')
-            # writer.write(message.encode())
-            # await writer.drain()
             data = await reader.read(100)
             now_time = datetime.now().strftime("[%d.%m.%Y %H:%M:%S]")
             msg = data.strip().decode("utf-8-sig", "ignore")
@@ -19,12 +16,9 @@ async def tcp_echo_client(message, host, port, file):
                 await f.write(f'{now_time} {msg}\n')
             print(f'{now_time} {msg}')
         except ConnectionError:
-            writer.close()
-            reader, writer = await asyncio.open_connection(host, port)
+            reader, __ = await asyncio.open_connection(host, port)
             continue
         except KeyboardInterrupt:
-            writer.close()
-            await writer.wait_closed()
             break
 
 
@@ -44,7 +38,7 @@ if __name__ == '__main__':
         required=False,
         action='store_true',
         help='PORT для подключения',
-        default=env.int('PORT')
+        default=env.int('RECEIVING_PORT')
     )
     parser.add_argument(
         '-f', '--file_path',
@@ -57,4 +51,4 @@ if __name__ == '__main__':
     connect_host = parser_args.host
     connect_port = parser_args.port
     file_path = parser_args.file_path
-    asyncio.run(tcp_echo_client('Hello World!', connect_host, connect_port, file_path))
+    asyncio.run(tcp_receiving_client(connect_host, connect_port, file_path))
