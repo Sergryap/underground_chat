@@ -1,10 +1,12 @@
 import asyncio
 import aiofiles
+from environs import Env
 from datetime import datetime
+import argparse
 
 
-async def tcp_echo_client(message, file):
-    reader, writer = await asyncio.open_connection('minechat.dvmn.org', 5000)
+async def tcp_echo_client(message, host, port, file):
+    reader, writer = await asyncio.open_connection(host, port)
     while True:
         try:
             # print(f'Send: {message!r}')
@@ -18,7 +20,7 @@ async def tcp_echo_client(message, file):
             print(f'{now_time} {msg}')
         except ConnectionError:
             writer.close()
-            reader, writer = await asyncio.open_connection('minechat.dvmn.org', 5000)
+            reader, writer = await asyncio.open_connection(host, port)
             continue
         except KeyboardInterrupt:
             writer.close()
@@ -27,4 +29,32 @@ async def tcp_echo_client(message, file):
 
 
 if __name__ == '__main__':
-    asyncio.run(tcp_echo_client('Hello World!', 'chat.txt'))
+    env = Env()
+    env.read_env()
+    parser = argparse.ArgumentParser(prog='UndegroundChat', description='Подключение к чату')
+    parser.add_argument(
+        '-hs', '--host',
+        required=False,
+        action='store_true',
+        help='HOST для подключения',
+        default=env.str('HOST')
+    )
+    parser.add_argument(
+        '-p', '--port',
+        required=False,
+        action='store_true',
+        help='PORT для подключения',
+        default=env.int('PORT')
+    )
+    parser.add_argument(
+        '-f', '--file_path',
+        required=False,
+        action='store_true',
+        help='Путь к файлу с историей переписки',
+        default=env.str('FILE_PATH')
+    )
+    parser_args = parser.parse_args()
+    connect_host = parser_args.host
+    connect_port = parser_args.port
+    file_path = parser_args.file_path
+    asyncio.run(tcp_echo_client('Hello World!', connect_host, connect_port, file_path))
