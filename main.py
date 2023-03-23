@@ -16,6 +16,10 @@ async def tcp_echo_client(message, file):
             async with aiofiles.open(file, mode='a') as f:
                 await f.write(f'{now_time} {msg}\n')
             print(f'{now_time} {msg}')
+        except ConnectionError:
+            writer.close()
+            reader, writer = await asyncio.open_connection('minechat.dvmn.org', 5000)
+            continue
         except KeyboardInterrupt:
             writer.close()
             await writer.wait_closed()
