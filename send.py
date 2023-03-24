@@ -2,6 +2,7 @@ import asyncio
 from environs import Env
 import argparse
 import logging
+import json
 
 logger = logging.getLogger('chat_logger')
 
@@ -12,7 +13,9 @@ async def connect(host, port, token):
     logger.debug(data.decode())
     writer.write(f'{token}\n'.encode())
     await writer.drain()
-    await reader.read(200)
+    data = await reader.read(200)
+    if json.loads(data.decode().split('\n')[0]) is None:
+        raise ValueError('Неизвестный токен. Проверьте его или зарегистрируйте заново')
     return reader, writer
 
 
