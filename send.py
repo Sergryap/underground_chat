@@ -10,36 +10,46 @@ from environs import Env
 logger = logging.getLogger('chat_logger')
 
 
-async def connect(host, port, token):
-    reader, writer = await asyncio.open_connection(host, port)
+async def authorise(reader, writer, token):
     data = await reader.read(200)
     logger.debug(data.decode())
     writer.write(f'{token}\n'.encode())
     await writer.drain()
     data = await reader.read(200)
     received_data = data.decode().split('\n')
+    if not received_data:
+        return await authorise(reader, writer, token)
     if len(received_data) < 2 or not received_data[1]:
         print('Welcome to chat! Post your message below. End it with an empty line.')
     else:
-        print(data.decode().split('\n')[1])
-    if received_data and json.loads(received_data[0]) is None:
-        name = input()
-        writer.write(f'{name}\n'.encode())
-        await writer.drain()
-        data = await reader.read(200)
-        received_data = data.decode().split('\n')
-        if not received_data or (
-                len(received_data) > 0 and ('account_hash' not in json.loads(received_data[0]))
-        ):
-            return await connect(host, port, token)
-        new_token = json.loads(data.decode().split('\n')[0])['account_hash']
-        async with aiofiles.open('token.txt', mode='w') as f:
-            await f.write(new_token)
+        print(received_data[1])
+    return data.decode().split('\n')
+
+
+async def register(reader, writer):
+    name = input()
+    writer.write(f'{name}\n'.encode())
+    await writer.drain()
+    data = await reader.read(200)
+    register_data = data.decode().split('\n')
+    if not register_data or (
+            len(register_data) > 0 and ('account_hash' not in json.loads(register_data[0]))
+    ):
+        return await register(reader, writer)
+    new_token = json.loads(register_data[0])['account_hash']
+    async with aiofiles.open('token.txt', mode='w') as f:
+        await f.write(new_token)
+    return new_token
+
+
+async def connect(host, port, token):
+    reader, writer = await asyncio.open_connection(host, port)
+    received_data = await authorise(reader, writer, token)
+    if json.loads(received_data[0]) is None:
+        new_token = await register(reader, writer)
         writer.close()
         await writer.wait_closed()
         return await connect(host, port, new_token)
-    elif not received_data:
-        return await connect(host, port, token)
     return reader, writer
 
 
