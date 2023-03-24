@@ -17,13 +17,13 @@ async def authorise(reader, writer, token):
     await writer.drain()
     data = await reader.read(200)
     received_data = data.decode().split('\n')
-    if not received_data:
+    if not received_data or (len(received_data) > 0 and not received_data[0]):
         return await authorise(reader, writer, token)
     if len(received_data) < 2 or not received_data[1]:
         print('Welcome to chat! Post your message below. End it with an empty line.')
     else:
         print(received_data[1])
-    return data.decode().split('\n')
+    return received_data
 
 
 async def register_r(reader, writer, name):
