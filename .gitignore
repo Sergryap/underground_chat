@@ -2,3 +2,4 @@ venv
 .idea
 .env
 chat.txt
+token.txt

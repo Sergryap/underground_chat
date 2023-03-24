@@ -1,8 +1,11 @@
 import asyncio
-from environs import Env
 import argparse
 import logging
 import json
+import aiofiles
+
+from environs import Env
+
 
 logger = logging.getLogger('chat_logger')
 
@@ -14,8 +17,29 @@ async def connect(host, port, token):
     writer.write(f'{token}\n'.encode())
     await writer.drain()
     data = await reader.read(200)
-    if json.loads(data.decode().split('\n')[0]) is None:
-        raise ValueError('Неизвестный токен. Проверьте его или зарегистрируйте заново')
+    received_data = data.decode().split('\n')
+    if len(received_data) < 2 or not received_data[1]:
+        print('Welcome to chat! Post your message below. End it with an empty line.')
+    else:
+        print(data.decode().split('\n')[1])
+    if received_data and json.loads(received_data[0]) is None:
+        name = input()
+        writer.write(f'{name}\n'.encode())
+        await writer.drain()
+        data = await reader.read(200)
+        received_data = data.decode().split('\n')
+        if not received_data or (
+                len(received_data) > 0 and ('account_hash' not in json.loads(received_data[0]))
+        ):
+            return await connect(host, port, token)
+        new_token = json.loads(data.decode().split('\n')[0])['account_hash']
+        async with aiofiles.open('token.txt', mode='w') as f:
+            await f.write(new_token)
+        writer.close()
+        await writer.wait_closed()
+        return await connect(host, port, new_token)
+    elif not received_data:
+        return await connect(host, port, token)
     return reader, writer
 
 
