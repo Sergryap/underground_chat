@@ -33,21 +33,18 @@ if __name__ == '__main__':
     parser.add_argument(
         '-hs', '--host',
         required=False,
-        action='store_true',
         help='HOST для подключения',
         default=env.str('HOST')
     )
     parser.add_argument(
         '-p', '--port',
         required=False,
-        action='store_true',
         help='PORT для подключения',
         default=env.int('RECEIVING_PORT')
     )
     parser.add_argument(
         '-f', '--file_path',
         required=False,
-        action='store_true',
         help='Путь к файлу с историей переписки',
         default=env.str('FILE_PATH')
     )

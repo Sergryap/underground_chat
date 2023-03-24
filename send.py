@@ -62,11 +62,11 @@ async def register(reader, writer, name):
     return new_token
 
 
-async def tcp_send_client(host, port, token):
+async def tcp_send_client(host, port, token, login=None):
     reader, writer = await asyncio.open_connection(host, port)
     received_data = await authorise(reader, writer, token)
     if json.loads(received_data[0]) is None:
-        name = input().strip().replace(r'\n', '_')
+        name = login if login else input().strip().replace(r'\n', '_')
         new_token = await register_r(reader, writer, name)
         writer.close()
         await writer.wait_closed()
@@ -89,6 +89,23 @@ async def tcp_send_client(host, port, token):
             break
 
 
+async def send_single_msg(host, port, token, msg, login=None):
+    reader, writer = await asyncio.open_connection(host, port)
+    received_data = await authorise(reader, writer, token)
+    if json.loads(received_data[0]) is None:
+        name = login if login else input().strip().replace(r'\n', '_')
+        new_token = await register_r(reader, writer, name)
+        writer.close()
+        await writer.wait_closed()
+        await tcp_send_client(host, port, new_token)
+        return
+    writer.write(f'{msg}\n\n'.encode())
+    await writer.drain()
+    logger.debug(f'Сообщение "{msg}" отправлено!')
+    writer.close()
+    await writer.wait_closed()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
@@ -96,30 +113,44 @@ if __name__ == '__main__':
     parser.add_argument(
         '-hs', '--host',
         required=False,
-        action='store_true',
         help='HOST для подключения',
         default=env.str('HOST')
     )
     parser.add_argument(
         '-p', '--port',
         required=False,
-        action='store_true',
         help='PORT для подключения',
         default=env.int('SENDING_PORT')
     )
     parser.add_argument(
         '-t', '--token',
         required=False,
-        action='store_true',
         help='TOKEN для подключения',
         default=env.str('TOKEN')
     )
+    parser.add_argument(
+        '-n', '--name',
+        required=False,
+        help='Желаемый логин, если нет токена',
+    )
+    parser.add_argument(
+        '-m', '--msg',
+        required=False,
+        help='Отправляемое сообщение',
+    )
+
     parser_args = parser.parse_args()
     connect_host = parser_args.host
     connect_port = parser_args.port
     connect_token = env.str('TOKEN')
+    login_name = parser_args.name
+    msg = parser_args.msg
     logging.basicConfig(
         format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-5s [%(asctime)s]  %(message)s',
         level=logging.DEBUG
     )
-    asyncio.run(tcp_send_client(connect_host, connect_port, connect_token))
+    if msg:
+        asyncio.run(send_single_msg(connect_host, connect_port, connect_token, msg, login_name))
+    else:
+        asyncio.run(tcp_send_client(connect_host, connect_port, connect_token, login_name))
+
