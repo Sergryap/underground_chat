@@ -1,8 +1,12 @@
 import asyncio
 import aiofiles
+import argparse
+import logging
 from environs import Env
 from datetime import datetime
-import argparse
+
+
+logger = logging.getLogger('chat_logger')
 
 
 async def tcp_receiving_client(host, port, file):
