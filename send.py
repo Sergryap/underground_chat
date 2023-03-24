@@ -66,7 +66,8 @@ async def tcp_send_client(host, port, token):
     reader, writer = await asyncio.open_connection(host, port)
     received_data = await authorise(reader, writer, token)
     if json.loads(received_data[0]) is None:
-        new_token = await register(reader, writer)
+        name = input().strip().replace(r'\n', '_')
+        new_token = await register_r(reader, writer, name)
         writer.close()
         await writer.wait_closed()
         await tcp_send_client(host, port, new_token)
@@ -74,14 +75,13 @@ async def tcp_send_client(host, port, token):
     print('Отправляйте сообщения, нажимая "enter"')
     while True:
         try:
-            message = input()
+            message = input().strip().replace(r'\n', ' ')
             writer.write(f'{message}\n\n'.encode())
             await writer.drain()
             logger.debug(f'Сообщение "{message}" отправлено!')
         except ConnectionError:
             writer.close()
             await writer.wait_closed()
-            reader, writer = await connect(host, port, token)
             continue
         except KeyboardInterrupt:
             writer.close()
