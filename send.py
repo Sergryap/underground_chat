@@ -138,19 +138,14 @@ if __name__ == '__main__':
         required=False,
         help='Отправляемое сообщение',
     )
-
-    parser_args = parser.parse_args()
-    connect_host = parser_args.host
-    connect_port = parser_args.port
-    connect_token = env.str('TOKEN')
-    login_name = parser_args.name
-    msg = parser_args.msg
     logging.basicConfig(
         format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-5s [%(asctime)s]  %(message)s',
         level=logging.DEBUG
     )
+    parser_args = parser.parse_args()
+    msg = parser_args.msg
     if msg:
-        asyncio.run(send_single_msg(connect_host, connect_port, connect_token, msg, login_name))
+        asyncio.run(send_single_msg(parser_args.host, parser_args.port, env.str('TOKEN'), msg, parser_args.name))
     else:
-        asyncio.run(tcp_send_client(connect_host, connect_port, connect_token, login_name))
+        asyncio.run(tcp_send_client(parser_args.host, parser_args.port, env.str('TOKEN'), parser_args.name))
 
