@@ -109,7 +109,7 @@ async def send_single_msg(host, port, token, msg, login=None):
 if __name__ == '__main__':
     env = Env()
     env.read_env()
-    parser = argparse.ArgumentParser(prog='UndegroundChat', description='Подключение к чату')
+    parser = argparse.ArgumentParser(prog='UndegroundChat', description='Отправка сообщений в чат')
     parser.add_argument(
         '-hs', '--host',
         required=False,
@@ -148,4 +148,3 @@ if __name__ == '__main__':
         asyncio.run(send_single_msg(parser_args.host, parser_args.port, env.str('TOKEN'), msg, parser_args.name))
     else:
         asyncio.run(tcp_send_client(parser_args.host, parser_args.port, env.str('TOKEN'), parser_args.name))
-
