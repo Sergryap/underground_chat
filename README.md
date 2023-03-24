@@ -17,3 +17,24 @@
 Для отправки сообщений:
 
 ```python3 send.py```
+
+### Установка
+
+```Python
+git clone https://github.com/Sergryap/underground_chat.git
+cd underground_chat
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+nano .env
+```
+В файле .env сохраните следующие переменные:
+
+```txt
+HOST=<HOST для подключения>
+RECEIVING_PORT=5000
+SENDING_PORT=5050
+FILE_PATH=<Полный путь к файлу для сохранения сообщений чата>
+TOKEN=<TOKEN для подключения>
+```
+
