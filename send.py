@@ -42,19 +42,15 @@ async def register(reader, writer):
     return new_token
 
 
-async def connect(host, port, token):
+async def tcp_send_client(host, port, token):
     reader, writer = await asyncio.open_connection(host, port)
     received_data = await authorise(reader, writer, token)
     if json.loads(received_data[0]) is None:
         new_token = await register(reader, writer)
         writer.close()
         await writer.wait_closed()
-        return await connect(host, port, new_token)
-    return reader, writer
-
-
-async def tcp_send_client(host, port, token):
-    reader, writer = await connect(host, port, token)
+        await tcp_send_client(host, port, new_token)
+        return
     print('Отправляйте сообщения, нажимая "enter"')
     while True:
         try:
