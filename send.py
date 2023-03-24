@@ -26,16 +26,36 @@ async def authorise(reader, writer, token):
     return data.decode().split('\n')
 
 
-async def register(reader, writer):
-    name = input()
+async def register_r(reader, writer, name):
     writer.write(f'{name}\n'.encode())
     await writer.drain()
     data = await reader.read(200)
     register_data = data.decode().split('\n')
-    if not register_data or (
-            len(register_data) > 0 and ('account_hash' not in json.loads(register_data[0]))
+    print(register_data)
+    if (
+            not register_data
+            or (len(register_data) > 0 and not register_data[0])
+            or 'Enter preferred nickname below:' in register_data
     ):
-        return await register(reader, writer)
+        return await register(reader, writer, name)
+    new_token = json.loads(register_data[0])['account_hash']
+    async with aiofiles.open('token.txt', mode='w') as f:
+        await f.write(new_token)
+    return new_token
+
+
+async def register(reader, writer, name):
+    while True:
+        writer.write(f'{name}\n'.encode())
+        await writer.drain()
+        data = await reader.read(200)
+        register_data = data.decode().split('\n')
+        if (
+                register_data
+                and register_data[0]
+                and 'Enter preferred nickname below:' not in register_data
+                and json.loads(register_data[0]).get('account_hash')):
+            break
     new_token = json.loads(register_data[0])['account_hash']
     async with aiofiles.open('token.txt', mode='w') as f:
         await f.write(new_token)
