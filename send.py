@@ -4,6 +4,7 @@ import logging
 import json
 import aiofiles
 
+from time import sleep
 from environs import Env
 
 
@@ -26,7 +27,7 @@ async def authorise(reader, writer, token):
     return received_data
 
 
-async def register_r(reader, writer, name):
+async def register(reader, writer, name):
     writer.write(f'{name}\n'.encode())
     await writer.drain()
     data = await reader.read(200)
@@ -44,66 +45,41 @@ async def register_r(reader, writer, name):
     return new_token
 
 
-async def register(reader, writer, name):
+async def send_message(host, port, token, msg=None, login=None):
     while True:
-        writer.write(f'{name}\n'.encode())
-        await writer.drain()
-        data = await reader.read(200)
-        register_data = data.decode().split('\n')
-        if (
-                register_data
-                and register_data[0]
-                and 'Enter preferred nickname below:' not in register_data
-                and json.loads(register_data[0]).get('account_hash')):
-            break
-    new_token = json.loads(register_data[0])['account_hash']
-    async with aiofiles.open('token.txt', mode='w') as f:
-        await f.write(new_token)
-    return new_token
-
-
-async def tcp_send_client(host, port, token, login=None):
-    reader, writer = await asyncio.open_connection(host, port)
-    received_data = await authorise(reader, writer, token)
-    if json.loads(received_data[0]) is None:
-        name = login if login else input().strip().replace(r'\n', '_')
-        new_token = await register_r(reader, writer, name)
-        writer.close()
-        await writer.wait_closed()
-        await tcp_send_client(host, port, new_token)
-        return
-    print('Отправляйте сообщения, нажимая "enter"')
-    while True:
+        reader, writer = await asyncio.open_connection(host, port)
         try:
-            message = input().strip().replace(r'\n', ' ')
-            writer.write(f'{message}\n\n'.encode())
-            await writer.drain()
-            logger.debug(f'Сообщение "{message}" отправлено!')
-        except ConnectionError:
-            writer.close()
-            await writer.wait_closed()
-            continue
-        except KeyboardInterrupt:
-            writer.close()
-            await writer.wait_closed()
+            received_data = await authorise(reader, writer, token)
+            if json.loads(received_data[0]) is None:
+                name = login if login else input().strip().replace(r'\n', '_')
+                new_token = await register(reader, writer, name)
+                writer.close()
+                await writer.wait_closed()
+                await send_message(host, port, new_token, msg, login)
+                return
+            if not msg:
+                print('Отправляйте сообщения, нажимая "enter"')
+            while True:
+                message = msg if msg else input()
+                message = message.strip().replace(r'\n', ' ')
+                writer.write(f'{message}\n\n'.encode())
+                await writer.drain()
+                logger.debug(f'Сообщение "{message}" отправлено!')
+                if msg:
+                    break
             break
-
-
-async def send_single_msg(host, port, token, msg, login=None):
-    reader, writer = await asyncio.open_connection(host, port)
-    received_data = await authorise(reader, writer, token)
-    if json.loads(received_data[0]) is None:
-        name = login if login else input().strip().replace(r'\n', '_')
-        new_token = await register_r(reader, writer, name)
-        writer.close()
-        await writer.wait_closed()
-        await tcp_send_client(host, port, new_token)
-        return
-    writer.write(f'{msg}\n\n'.encode())
-    await writer.drain()
-    logger.debug(f'Сообщение "{msg}" отправлено!')
-    writer.close()
-    await writer.wait_closed()
+        except KeyboardInterrupt:
+            break
+        except ConnectionError:
+            continue
+        except TimeoutError:
+            sleep(5)
+            continue
+        except Exception:
+            continue
+        finally:
+            writer.close()
+            await writer.wait_closed()
 
 
 if __name__ == '__main__':
@@ -136,15 +112,18 @@ if __name__ == '__main__':
     parser.add_argument(
         '-m', '--msg',
         required=False,
-        help='Отправляемое сообщение',
+        help='Отправляемое сообщение. Если не указано, то сообщения будут запрошены через ввод',
     )
     logging.basicConfig(
         format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-5s [%(asctime)s]  %(message)s',
         level=logging.DEBUG
     )
     parser_args = parser.parse_args()
-    msg = parser_args.msg
-    if msg:
-        asyncio.run(send_single_msg(parser_args.host, parser_args.port, env.str('TOKEN'), msg, parser_args.name))
-    else:
-        asyncio.run(tcp_send_client(parser_args.host, parser_args.port, env.str('TOKEN'), parser_args.name))
+
+    asyncio.run(send_message(
+        host=parser_args.host,
+        port=parser_args.port,
+        token=env.str('TOKEN'),
+        msg=parser_args.msg,
+        login=parser_args.name
+    ))
