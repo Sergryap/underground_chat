@@ -71,11 +71,13 @@ async def send_message(host, port, token, msg=None, login=None):
         except KeyboardInterrupt:
             break
         except ConnectionError:
+            sleep(5)
             continue
         except TimeoutError:
             sleep(5)
             continue
         except Exception:
+            sleep(5)
             continue
         finally:
             writer.close()
