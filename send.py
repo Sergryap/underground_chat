@@ -46,6 +46,7 @@ async def register(reader, writer, name):
 
 
 async def send_message(host, port, token, msg=None, login=None):
+    first_reconnection = True
     while True:
         reader, writer = await asyncio.open_connection(host, port)
         try:
@@ -70,14 +71,10 @@ async def send_message(host, port, token, msg=None, login=None):
             break
         except KeyboardInterrupt:
             break
-        except ConnectionError:
-            sleep(5)
-            continue
-        except TimeoutError:
-            sleep(5)
-            continue
-        except Exception:
-            sleep(5)
+        except (ConnectionError, TimeoutError):
+            second = 0 if first_reconnection else 5
+            sleep(second)
+            first_reconnection = False
             continue
         finally:
             writer.close()

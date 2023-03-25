@@ -4,13 +4,15 @@ import argparse
 import logging
 from environs import Env
 from datetime import datetime
+from time import sleep
 
 
 logger = logging.getLogger('chat_logger')
 
 
-async def tcp_receiving_client(host, port, file):
+async def get_message(host, port, file):
     reader, __ = await asyncio.open_connection(host, port)
+    first_reconnection = True
     while True:
         try:
             data = await reader.read(100)
@@ -19,8 +21,11 @@ async def tcp_receiving_client(host, port, file):
             async with aiofiles.open(file, mode='a') as f:
                 await f.write(f'{now_time} {msg}\n')
             print(f'{now_time} {msg}')
-        except ConnectionError:
+        except (ConnectionError, TimeoutError):
+            second = 0 if first_reconnection else 5
+            sleep(second)
             reader, __ = await asyncio.open_connection(host, port)
+            first_reconnection = False
             continue
         except KeyboardInterrupt:
             break
@@ -52,4 +57,4 @@ if __name__ == '__main__':
     connect_host = parser_args.host
     connect_port = parser_args.port
     file_path = parser_args.file_path
-    asyncio.run(tcp_receiving_client(connect_host, connect_port, file_path))
+    asyncio.run(get_message(connect_host, connect_port, file_path))
